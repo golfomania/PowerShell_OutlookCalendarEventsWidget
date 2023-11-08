@@ -8,6 +8,7 @@
 Function Get-OutlookCalendar  
  {  
   # use Outlook interop to get the default calendar folder
+  # Search your PC in file explorer for "Microsoft.Office.Interop.Outlook.dll" to find one of this DLLs and paste the path here
   Add-Type -Path "C:\Program Files\Microsoft Office\root\Office16\ADDINS\Microsoft Power Query for Excel Integrated\bin\Microsoft.Office.Interop.Outlook.dll" | out-null
   $olFolders = “Microsoft.Office.Interop.Outlook.OlDefaultFolders” -as [type]  
   $outlook = new-object -comobject outlook.application  
