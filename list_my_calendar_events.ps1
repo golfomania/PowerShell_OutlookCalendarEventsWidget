@@ -35,10 +35,10 @@ Function Get-OutlookCalendar
    Location | Format-Table -AutoSize
  } #end function Get-OutlookCalendar  
  
- # run function and refresh every 10 minutes
+ # run function and refresh every minute
  while ($true) {
   Clear-Host
   Get-OutlookCalendar
-  Start-Sleep -Seconds 600
+  Start-Sleep -Seconds 60
 }
 
