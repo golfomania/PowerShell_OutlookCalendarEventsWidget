@@ -1,5 +1,5 @@
 # PowerShell Outlook Calendarevents Widget
-List the next events in my Outlook calendar of today as "quick and dirty" widget on my side screen.
+This script list the next events in my Outlook calendar of today. I use it as "quick and dirty" widget on my side screen, because Microsoft is not having widgets at the moment.
 
 ## Status
 Working.
@@ -21,6 +21,6 @@ Without the EndIn and StartIn columns the refreh can be every 10+ minutes what h
 Would be cool to update the script, that its only the backend updating a database like SQLite and then have a frontend showing the data with refreshs only on component level.
 
 ## error
-if you see something like this, just wait or resatrt the script. I guess it i caused when Outlook is not ready yet.
+if you see something like this, just wait or restart the script. I guess it i caused when Outlook is not ready yet.
 
 ![Alt text](image-1.png)
