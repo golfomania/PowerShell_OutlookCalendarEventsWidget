@@ -8,6 +8,7 @@
 #############################################
 # preperation of SQLite DB	
 # download SQLite from https://www.sqlite.org/download.html
+# 
 # create a new DB named calendar.db > .open calendar.db
 # create a new table named table_meetings with the following columns:
 # id (INTEGER PRIMARY KEY AUTOINCREMENT), subject (TEXT), start (TEXT), duration (TEXT), , startin (TEXT), endin (TEXT), location (TEXT) >
@@ -20,6 +21,7 @@
 # read: SELECT * FROM meetings_table;
 # write: INSERT INTO meetings_table (name, start, duration, endin, startin, location) VALUES ('name1', 'start1', '60', '10', '1', 'location1');
 # delete: DELETE FROM meetings_table WHERE id = 1;
+# .exit
 #############################################
 
 Function Get-OutlookCalendar  
@@ -50,8 +52,30 @@ Function Get-OutlookCalendar
   @{Name='EndIn'; Expression={if ($_.Start -lt (Get-Date))  {((New-TimeSpan -Start (Get-Date) -End $_.End).TotalMinutes) -as [int]} else {""}}}, 
   @{Name='StartIn'; Expression={if ($_.Start -gt (Get-Date)) {((New-TimeSpan -Start (Get-Date) -End $_.Start).TotalMinutes) -as [int]} else {""}}}, 
    Location | Format-Table -AutoSize
+
+   # write to SQLite DB
+   # Load the System.Data.SQLite assembly replace with path to your DLL
+   # source https://system.data.sqlite.org/
+    [Reflection.Assembly]::LoadFile("C:\sqlite3\sqlite-netFx46-static-binary-bundle-x64-2015-1.0.118.0\System.Data.SQLite.dll")
+
+    # Create a connection to the database
+    $connection = New-Object System.Data.SQLite.SQLiteConnection
+    # replace with your path to the DB
+    $connection.ConnectionString = "Data Source='C:\sqlite3\calendar.db';Version=3;"
+    $connection.Open()
+
+    # Create a command to insert data into a table
+    $command = $connection.CreateCommand()
+    $command.CommandText = "INSERT INTO meetings_table (name, start, duration, endin, startin, location) VALUES ('name11', 'start1', '60', '10', '1', 'location11')"
+
+    # Execute the command
+    $command.ExecuteNonQuery()
+
+    # Close the connection
+    $connection.Close()
  } #end function Get-OutlookCalendar  
  
+
  # run function and refresh every minute
  while ($true) {
   Clear-Host
