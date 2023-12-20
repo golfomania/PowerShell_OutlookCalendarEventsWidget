@@ -53,7 +53,9 @@ Function Get-OutlookCalendar
   @{Name='StartIn'; Expression={if ($_.Start -gt (Get-Date)) {((New-TimeSpan -Start (Get-Date) -End $_.Start).TotalMinutes) -as [int]} else {""}}}, 
    Location | Format-Table -AutoSize
 
-   # write to SQLite DB
+  
+
+   # SQLite DB
    # Load the System.Data.SQLite assembly replace with path to your DLL
    # source https://system.data.sqlite.org/
     [Reflection.Assembly]::LoadFile("C:\sqlite3\sqlite-netFx46-static-binary-bundle-x64-2015-1.0.118.0\System.Data.SQLite.dll")
@@ -65,11 +67,23 @@ Function Get-OutlookCalendar
     $connection.Open()
 
     # Create a command to insert data into a table
-    $command = $connection.CreateCommand()
-    $command.CommandText = "INSERT INTO meetings_table (name, start, duration, endin, startin, location) VALUES ('name11', 'start1', '60', '10', '1', 'location11')"
+    # $command = $connection.CreateCommand()
+    # $command.CommandText = "INSERT INTO meetings_table (name, start, duration, endin, startin, location) VALUES ('name11', 'start1', '60', '10', '1', 'location11')"
 
+    # Create a command to read data from a table
+    $command = $connection.CreateCommand()
+    $command.CommandText = "SELECT * FROM meetings_table;"
+    $result = $command.ExecuteReader()
+    
+    # Read and display the data
+    while ($result.Read())
+    {
+        Write-Host $result.GetValue(0) $result.GetValue(1) $result.GetValue(2) $result.GetValue(3) $result.GetValue(4) $result.GetValue(5) $result.GetValue(6)
+    }
+
+    
     # Execute the command
-    $command.ExecuteNonQuery()
+    # $command.ExecuteNonQuery()
 
     # Close the connection
     $connection.Close()
