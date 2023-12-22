@@ -79,6 +79,30 @@ Function Get-OutlookCalendar
     while ($result.Read())
     {
         Write-Host $result.GetValue(0) $result.GetValue(1) $result.GetValue(2) $result.GetValue(3) $result.GetValue(4) $result.GetValue(5) $result.GetValue(6)
+
+        # check if there is an event in $events where the subject and the Start is the same as in the DB
+        # if not, delete the event from the DB
+        $event = $events | Where-Object {$_.Subject -eq $result.GetValue(1) -and $_.Start.ToString("HH:mm") -eq $result.GetValue(2)}
+        if (!$event) {
+            $command = $connection.CreateCommand()
+            $command.CommandText = "DELETE FROM meetings_table WHERE id = $($result.GetValue(0));"
+            $command.ExecuteNonQuery()
+        
+      }
+      
+      # check if there is an event in $events which is not in the DB
+      # if yes, add it to the DB
+      $event = $events | Where-Object {$_.Subject -eq $result.GetValue(1) -and $_.Start.ToString("HH:mm") -eq $result.GetValue(2)}
+      if (!$event) {
+        $command = $connection.CreateCommand()
+        $command.CommandText = "INSERT INTO meetings_table (name, start, duration, endin, startin, location) VALUES ('$($event.Subject)', '$($event.Start.ToString("HH:mm"))', '$($event.Duration)', '$($event.EndIn)', '$($event.StartIn)', '$($event.Location)')"
+        $command.ExecuteNonQuery()
+      }
+        
+        
+        
+     
+        
     }
 
     
