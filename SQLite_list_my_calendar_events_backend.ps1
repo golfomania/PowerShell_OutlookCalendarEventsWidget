@@ -1,9 +1,9 @@
 #############################################
-# project: List my next calender events from lokal Outlook (no MS Graph API needed)
-# part: backend (saving the events to a SQLite DB)
+# project:  List my next calender events from lokal Outlook (no MS Graph API needed)
+# part:     backend (saving the events to a SQLite DB)
 # Martin Löffler 
 # 23.12.2023
-# WOORKS
+# WORKS
 #############################################
 
 #############################################
@@ -30,7 +30,7 @@ Function Get-OutlookCalendar
   #############################################
   # use Outlook interop to get the default calendar folder
   #############################################
-  # Search your PC in file explorer for "Microsoft.Office.Interop.Outlook.dll" to find one of this DLLs on your machine and paste the path here
+  # Search your PC in file explorer for "Microsoft.Office.Interop.Outlook.dll" to find one of this DLLs on your machine and paste the path to this DLL here
   Add-Type -Path "C:\Program Files\Microsoft Office\root\Office16\ADDINS\Microsoft Power Query for Excel Integrated\bin\Microsoft.Office.Interop.Outlook.dll" | out-null
   $olFolders = “Microsoft.Office.Interop.Outlook.OlDefaultFolders” -as [type]  
   $outlook = new-object -comobject outlook.application  
@@ -59,7 +59,6 @@ Function Get-OutlookCalendar
   
   #############################################
   # SQLite DB
-  #############################################
   # get all events from the DB
   #############################################
   # Load the System.Data.SQLite assembly replace with path to your DLL
