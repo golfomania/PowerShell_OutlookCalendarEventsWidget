@@ -1,8 +1,9 @@
 #############################################
-# List my next calender events from lokal Outlook (no MS Graph API needed)
+# project: List my next calender events from lokal Outlook (no MS Graph API needed)
+# part: backend (saving the events to a SQLite DB)
 # Martin Löffler 
 # 23.12.2023
-# WOORK IN PROGRESS
+# WOORKS
 #############################################
 
 #############################################
@@ -59,6 +60,8 @@ Function Get-OutlookCalendar
   #############################################
   # SQLite DB
   #############################################
+  # get all events from the DB
+  #############################################
   # Load the System.Data.SQLite assembly replace with path to your DLL
   # source https://system.data.sqlite.org/
   [Reflection.Assembly]::LoadFile("C:\sqlite3\sqlite-netFx46-static-binary-bundle-x64-2015-1.0.118.0\System.Data.SQLite.dll")
@@ -69,33 +72,62 @@ Function Get-OutlookCalendar
   $connection.ConnectionString = "Data Source='C:\sqlite3\calendar.db';Version=3;"
   $connection.Open()
 
+  if ($connection.State -eq 'Open') {
+    Write-Host "Connection to DB is open"
+  }
 
+  #############################################
+  # get all events from the DB
+  #############################################
+  $command = $connection.CreateCommand()
+  $command.CommandText = "SELECT * FROM meetings_table;"
+  $eventFromDatabaseSQLiteDataReader = $command.ExecuteReader()
 
-  
-  
+  # internal List of DB events & reset the list for every run
+  $eventsFromDatabase = New-Object System.Collections.ArrayList
+ 
+  while ($eventFromDatabaseSQLiteDataReader.Read())
+  {
+    # write to console for debugging
+    Write-Host $eventFromDatabaseSQLiteDataReader.GetValue(0) $eventFromDatabaseSQLiteDataReader.GetValue(1) $eventFromDatabaseSQLiteDataReader.GetValue(2) $eventFromDatabaseSQLiteDataReader.GetValue(3) $eventFromDatabaseSQLiteDataReader.GetValue(4) $eventFromDatabaseSQLiteDataReader.GetValue(5) $eventFromDatabaseSQLiteDataReader.GetValue(6)
+    
+    # create an object/hashtable for every event in the DB
+    $newEvent = @{
+      id = $eventFromDatabaseSQLiteDataReader.GetValue(0); 
+      name = $eventFromDatabaseSQLiteDataReader.GetValue(1);
+      start = $eventFromDatabaseSQLiteDataReader.GetValue(2);
+      duration = $eventFromDatabaseSQLiteDataReader.GetValue(3);
+      endin = $eventFromDatabaseSQLiteDataReader.GetValue(4);
+      startin = $eventFromDatabaseSQLiteDataReader.GetValue(5);
+      location = $eventFromDatabaseSQLiteDataReader.GetValue(6);
+    }
+    
+    # add the event object to the internal list of DB events
+    $eventsFromDatabase.Add($newEvent)
+  }
+  $eventFromDatabaseSQLiteDataReader.Close()
+
+  foreach ($eventFromDatabase in $eventsFromDatabase)
+  {
+    # write to console for debugging
+    Write-Host $eventFromDatabase.id $eventFromDatabase.name $eventFromDatabase.start $eventFromDatabase.duration $eventFromDatabase.endin $eventFromDatabase.startin $eventFromDatabase.location
+  }
+
   #############################################
   # updated existing events in the DB
   # delete events which are no longer in Outlook but in the DB
   #############################################
-  # get all events from the DB
-  $command = $connection.CreateCommand()
-  $command.CommandText = "SELECT * FROM meetings_table;"
-  $eventFromDatabase = $command.ExecuteReader()
-
-  # internal List of DB events & reset the list for every run
-  $eventsFromDatabase = New-Object System.Collections.ArrayList
-
+  
   # Iterate through these events of the Database and check them against the Outlook events
-  while ($eventFromDatabase.Read())
+  Write-Host "Start update & delete loop"
+  foreach ($eventFromDatabase in $eventsFromDatabase)
   {
-    # add the event to the internal list
-    $eventsFromDatabase.Add($eventFromDatabase)
-
     # write to console for debugging
-    Write-Host $eventFromDatabase.GetValue(0) $eventFromDatabase.GetValue(1) $eventFromDatabase.GetValue(2) $eventFromDatabase.GetValue(3) $eventFromDatabase.GetValue(4) $eventFromDatabase.GetValue(5) $eventFromDatabase.GetValue(6)
+    Write-Host "Current events from DB:"
+    Write-Host $eventFromDatabase.id $eventFromDatabase.name $eventFromDatabase.start $eventFromDatabase.duration $eventFromDatabase.endin $eventFromDatabase.startin $eventFromDatabase.location
 
     # check if there is an event in $events where the name/subject and the Starttime is the same as in the DB
-    $eventExistsInOutlook = $events | Where-Object {$_.Subject -eq $eventFromDatabase.GetValue(1) -and $_.Start.ToString("HH:mm") -eq $eventFromDatabase.GetValue(2)}
+    $eventExistsInOutlook = $events | Where-Object {$_.Subject -eq $eventFromDatabase.name -and $_.Start.ToString("HH:mm") -eq $eventFromDatabase.start}
 
     # if event exist in DB and Outlook, update the entry in the DB
     if ($eventExistsInOutlook) {
@@ -103,7 +135,7 @@ Function Get-OutlookCalendar
       Write-Host "Database event exists in Outlook, DB entry will be updated"
       # Create a command to insert data into a table
       $command = $connection.CreateCommand()
-      $command.CommandText = "UPDATE meetings_table SET name = '$($eventExistsInOutlook.Subject)', start = '$($eventExistsInOutlook.Start.ToString("HH:mm"))', duration = '$($eventExistsInOutlook.Duration)', endin = '$($eventExistsInOutlook.EndIn)', startin = '$($eventExistsInOutlook.StartIn)', location = '$($eventExistsInOutlook.Location)' WHERE name = '$($eventFromDatabase.GetValue(1))' AND start = '$($eventFromDatabase.GetValue(2))';"
+      $command.CommandText = "UPDATE meetings_table SET name = '$($eventExistsInOutlook.Subject)', start = '$($eventExistsInOutlook.Start.ToString("HH:mm"))', duration = '$($eventExistsInOutlook.Duration)', endin = $(if ($eventExistsInOutlook.Start -lt (Get-Date))  {((New-TimeSpan -Start (Get-Date) -End $eventExistsInOutlook.End).TotalMinutes) -as [int]} else {'NULL'}), startin = $(if ($eventExistsInOutlook.Start -gt (Get-Date)) {((New-TimeSpan -Start (Get-Date) -End $eventExistsInOutlook.Start).TotalMinutes) -as [int]} else {'NULL'}), location = '$($eventExistsInOutlook.Location)' WHERE name = '$($eventFromDatabase.name)' AND start = '$($eventFromDatabase.start)';"
       $command.ExecuteNonQuery()  
     } 
 
@@ -113,19 +145,21 @@ Function Get-OutlookCalendar
       Write-Host "Database event does no longer exist in Outlook, DB entry will be deleted"
       # Create a command to delete data from a table
       $command = $connection.CreateCommand()
-      $command.CommandText = "DELETE FROM meetings_table WHERE id = $($eventFromDatabase.GetValue(0));"
+      $command.CommandText = "DELETE FROM meetings_table WHERE id = $($eventFromDatabase.id);"
       $command.ExecuteNonQuery()
     }
   } # end of updating and deleting loop 
+  Write-Host "End update & delete loop"
 
   #############################################
   # add new Outlook events to the DB
   #############################################
   # iterate through all events from Outlook
+  Write-Host "Start add new loop"
   foreach ($outlookEvent in $events) {
     # check if there is an event in the DB where the name/subject and the Starttime is the same as in Outlook
     # check $outlookEvent.Subject and $outlookEvent.Start.ToString("HH:mm") against the $eventsFromDatabase
-    $eventExistsInDB = $eventsFromDatabase | Where-Object {$_.GetValue(1) -eq $outlookEvent.Subject -and $_.GetValue(2) -eq $outlookEvent.Start.ToString("HH:mm")}
+    $eventExistsInDB = $eventsFromDatabase | Where-Object {$_.name -eq $outlookEvent.Subject -and $_.start -eq $outlookEvent.Start.ToString("HH:mm")}
 
     # if event does not exist in DB, add new entry to the DB
     if (!$eventExistsInDB) {
@@ -133,22 +167,24 @@ Function Get-OutlookCalendar
       Write-Host "Outlook event does not exist in DB, entry will be created"
       # Create a command to insert data into a table
       $command = $connection.CreateCommand()
-      $command.CommandText = "INSERT INTO meetings_table (name, start, duration, endin, startin, location) VALUES ('$($outlookEvent.Subject)', '$($outlookEvent.Start.ToString("HH:mm"))', '$($outlookEvent.Duration)', '$($outlookEvent.EndIn)', '$($outlookEvent.StartIn)', '$($outlookEvent.Location)')"
+      $command.CommandText = "INSERT INTO meetings_table (name, start, duration, endin, startin, location) VALUES ('$($outlookEvent.Subject)', '$($outlookEvent.Start.ToString("HH:mm"))', '$($outlookEvent.Duration)', $(if ($outlookEvent.Start -lt (Get-Date))  {((New-TimeSpan -Start (Get-Date) -End $outlookEvent.End).TotalMinutes) -as [int]} else {'NULL'}), $(if ($outlookEvent.Start -gt (Get-Date)) {((New-TimeSpan -Start (Get-Date) -End $outlookEvent.Start).TotalMinutes) -as [int]} else {'NULL'}), '$($outlookEvent.Location)')"
       $command.ExecuteNonQuery()  
     } 
   } # end of adding loop
-  
+  Write-Host "End add new loop"
+
 
   # Close the DB connection
   $connection.Close()
  } # end of Get-OutlookCalendar function 
  
- #############################################
- # run function and refresh every minute
- #############################################
- while ($true) {
-  Clear-Host
-  Get-OutlookCalendar
-  Start-Sleep -Seconds 60
+
+#############################################
+# run function and refresh every minute
+#############################################
+while ($true) {
+ Clear-Host
+ Get-OutlookCalendar
+ Start-Sleep -Seconds 60
 }
 
