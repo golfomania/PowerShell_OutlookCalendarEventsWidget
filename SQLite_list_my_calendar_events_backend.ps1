@@ -1,7 +1,7 @@
 #############################################
 # List my next calender events from lokal Outlook (no MS Graph API needed)
 # Martin Löffler 
-# 11.11.2023
+# 23.12.2023
 # WOORK IN PROGRESS
 #############################################
 
@@ -69,63 +69,83 @@ Function Get-OutlookCalendar
   $connection.ConnectionString = "Data Source='C:\sqlite3\calendar.db';Version=3;"
   $connection.Open()
 
-  # Create a command to insert data into a table
-  # $command = $connection.CreateCommand()
-  # $command.CommandText = "INSERT INTO meetings_table (name, start, duration, endin, startin, location) VALUES ('name11', 'start1', '60', '10', '1', 'location11')"
+
 
   
   
   #############################################
-  # add new events to the DB, updated existing events
+  # updated existing events in the DB
+  # delete events which are no longer in Outlook but in the DB
   #############################################
   # get all events from the DB
   $command = $connection.CreateCommand()
   $command.CommandText = "SELECT * FROM meetings_table;"
   $eventFromDatabase = $command.ExecuteReader()
 
+  # internal List of DB events & reset the list for every run
+  $eventsFromDatabase = New-Object System.Collections.ArrayList
+
   # Iterate through these events of the Database and check them against the Outlook events
   while ($eventFromDatabase.Read())
   {
+    # add the event to the internal list
+    $eventsFromDatabase.Add($eventFromDatabase)
+
+    # write to console for debugging
     Write-Host $eventFromDatabase.GetValue(0) $eventFromDatabase.GetValue(1) $eventFromDatabase.GetValue(2) $eventFromDatabase.GetValue(3) $eventFromDatabase.GetValue(4) $eventFromDatabase.GetValue(5) $eventFromDatabase.GetValue(6)
 
-    # check if there is an event in $events where the subject and the Start is the same as in the DB
-    # if not, delete the event from the DB
-    $event = $events | Where-Object {$_.Subject -eq $eventFromDatabase.GetValue(1) -and $_.Start.ToString("HH:mm") -eq $eventFromDatabase.GetValue(2)}
-    if (!$event) {
+    # check if there is an event in $events where the name/subject and the Starttime is the same as in the DB
+    $eventExistsInOutlook = $events | Where-Object {$_.Subject -eq $eventFromDatabase.GetValue(1) -and $_.Start.ToString("HH:mm") -eq $eventFromDatabase.GetValue(2)}
+
+    # if event exist in DB and Outlook, update the entry in the DB
+    if ($eventExistsInOutlook) {
+      # write to console for debugging
+      Write-Host "Database event exists in Outlook, DB entry will be updated"
+      # Create a command to insert data into a table
+      $command = $connection.CreateCommand()
+      $command.CommandText = "UPDATE meetings_table SET name = '$($eventExistsInOutlook.Subject)', start = '$($eventExistsInOutlook.Start.ToString("HH:mm"))', duration = '$($eventExistsInOutlook.Duration)', endin = '$($eventExistsInOutlook.EndIn)', startin = '$($eventExistsInOutlook.StartIn)', location = '$($eventExistsInOutlook.Location)' WHERE name = '$($eventFromDatabase.GetValue(1))' AND start = '$($eventFromDatabase.GetValue(2))';"
+      $command.ExecuteNonQuery()  
+    } 
+
+    # if event does exist in DB but not in DB, delete the entry from the DB
+    else {
+      # write to console for debugging
+      Write-Host "Database event does no longer exist in Outlook, DB entry will be deleted"
+      # Create a command to delete data from a table
       $command = $connection.CreateCommand()
       $command.CommandText = "DELETE FROM meetings_table WHERE id = $($eventFromDatabase.GetValue(0));"
       $command.ExecuteNonQuery()
-        
     }
-      
-    # check if there is an event in $events which is not in the DB
-    # if yes, add it to the DB
-    $event = $events | Where-Object {$_.Subject -eq $eventFromDatabase.GetValue(1) -and $_.Start.ToString("HH:mm") -eq $eventFromDatabase.GetValue(2)}
-    if (!$event) {
+  } # end of updating and deleting loop 
+
+  #############################################
+  # add new Outlook events to the DB
+  #############################################
+  # iterate through all events from Outlook
+  foreach ($outlookEvent in $events) {
+    # check if there is an event in the DB where the name/subject and the Starttime is the same as in Outlook
+    # check $outlookEvent.Subject and $outlookEvent.Start.ToString("HH:mm") against the $eventsFromDatabase
+    $eventExistsInDB = $eventsFromDatabase | Where-Object {$_.GetValue(1) -eq $outlookEvent.Subject -and $_.GetValue(2) -eq $outlookEvent.Start.ToString("HH:mm")}
+
+    # if event does not exist in DB, add new entry to the DB
+    if (!$eventExistsInDB) {
+      # write to console for debugging
+      Write-Host "Outlook event does not exist in DB, entry will be created"
+      # Create a command to insert data into a table
       $command = $connection.CreateCommand()
-      $command.CommandText = "INSERT INTO meetings_table (name, start, duration, endin, startin, location) VALUES ('$($event.Subject)', '$($event.Start.ToString("HH:mm"))', '$($event.Duration)', '$($event.EndIn)', '$($event.StartIn)', '$($event.Location)')"
-      $command.ExecuteNonQuery()
-    }
-        
-        
-        
-     
-        
-  } # end of adding and updating loop 
-
-  #############################################
-  # delete events which are no longer in Outlook from the DB 
-  #############################################
-
-    
-
+      $command.CommandText = "INSERT INTO meetings_table (name, start, duration, endin, startin, location) VALUES ('$($outlookEvent.Subject)', '$($outlookEvent.Start.ToString("HH:mm"))', '$($outlookEvent.Duration)', '$($outlookEvent.EndIn)', '$($outlookEvent.StartIn)', '$($outlookEvent.Location)')"
+      $command.ExecuteNonQuery()  
+    } 
+  } # end of adding loop
+  
 
   # Close the DB connection
   $connection.Close()
- } #end function Get-OutlookCalendar  
+ } # end of Get-OutlookCalendar function 
  
-
+ #############################################
  # run function and refresh every minute
+ #############################################
  while ($true) {
   Clear-Host
   Get-OutlookCalendar
