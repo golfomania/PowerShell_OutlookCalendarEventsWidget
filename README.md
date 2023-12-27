@@ -26,5 +26,8 @@ if you see something like this, just wait it happens when Outlook is not ready y
 ![Alt text](image-1.png)
 
 # Backend with SQLite
-I decided to keep the §list_my_calendar_events.ps1" file as standalone CLI solution and add a new file "SQLite_list_my_calendar_events_backend.ps1".
+I decided to keep the "list_my_calendar_events.ps1" file as standalone CLI solution and added a new file "SQLite_list_my_calendar_events_backend.ps1".
 
+This script is build on top of the CLI, but stores and updates the next events of the day into an SQLite database. So my intention is to run this script as backend in the background on my PC and then display the events stored in the database with a small svelte frontend (will build this next in a separate repo)
+
+Information about the SQLite setup and other settings to consider when running this backend script on your side, see the commebts inside the file.
