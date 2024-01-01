@@ -31,3 +31,5 @@ I decided to keep the "list_my_calendar_events.ps1" file as standalone CLI solut
 This script is build on top of the CLI, but stores and updates the next events of the day into an SQLite database. So my intention is to run this script as backend in the background on my PC and then display the events stored in the database with a small svelte frontend (will build this next in a separate repo)
 
 Information about the SQLite setup and other settings to consider when running this backend script on your side, see the commebts inside the file.
+
+[Link to the Frontend repo](https://github.com/golfomania/Svelte_Frontend-for-Outlook-calendar-widget)
